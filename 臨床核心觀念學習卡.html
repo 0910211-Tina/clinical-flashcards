@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<!-- saved from url=(0061)file:///D:/OneDrive/%E6%96%87%E4%BB%B6/Downloads/index_2.html -->
+<html lang="zh-TW"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臨床核心觀念學習卡</title>
+    <!-- Supabase SDK -->
+    <script src="./臨床核心觀念學習卡_files/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --bg-color: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text-color: #333333;
+            --hard-color: #EF4444;
+            --good-color: #F59E0B;
+            --easy-color: #10B981;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 雲端同步狀態指示器 */
+        .sync-indicator {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #64748B;
+            background: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #CBD5E1;
+            transition: background-color 0.3s;
+        }
+
+        .sync-dot.syncing { background-color: #F59E0B; animation: pulse 1s infinite; }
+        .sync-dot.synced  { background-color: #10B981; }
+        .sync-dot.offline { background-color: #EF4444; }
+        .sync-dot.local   { background-color: #94A3B8; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 頂部進度條區域 */
+        .header {
+            width: 100%;
+            max-width: 750px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+            gap: 12px;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #E2E8F0;
+            border-radius: 10px;
+            height: 14px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #64748B;
+        }
+
+        /* 卡片容器與3D翻轉設定 */
+        .card-container {
+            width: 100%;
+            max-width: 750px;
+            height: 550px;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            box-sizing: border-box;
+            border-radius: 16px;
+            background-color: var(--card-bg);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            font-size: 1.6rem;
+            line-height: 1.6;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        .card-face::-webkit-scrollbar { width: 8px; }
+        .card-face::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 10px; }
+
+        .card-front { color: var(--primary-color); font-weight: bold; }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #FAFAFA;
+            border: 2px solid var(--primary-color);
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            justify-content: flex-start;
+            padding: 40px;
+            color: #1E293B;
+            font-weight: bold;
+        }
+
+        .main-answer { font-size: 1.6rem; margin-bottom: 20px; width: 100%; }
+
+        .main-answer.center-only {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        .concept-text {
+            color: #334155;
+            font-size: 1.35rem;
+            line-height: 1.7;
+            font-weight: normal;
+            margin-top: 15px;
+            padding-top: 20px;
+            border-top: 2px dashed #CBD5E1;
+            display: block;
+            width: 100%;
+        }
+
+        .concept-title { color: #D97706; font-size: 1.4rem; font-weight: bold; display: block; margin-bottom: 10px; }
+
+        /* SRS 記憶按鈕區塊 */
+        .srs-controls {
+            display: flex;
+            gap: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .srs-controls.visible { opacity: 1; pointer-events: auto; }
+
+        button.srs-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, opacity 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button.srs-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        button.srs-btn:active { transform: translateY(0); }
+
+        .btn-hard { background-color: var(--hard-color); }
+        .btn-good { background-color: var(--good-color); }
+        .btn-easy { background-color: var(--easy-color); }
+
+        .hint-text {
+            margin-top: 15px;
+            color: #94A3B8;
+            font-size: 1rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .key-hint {
+            display: inline-block;
+            background: #CBD5E1;
+            color: #333;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            margin-left: 5px;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+
+        .restart-btn {
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .restart-btn:hover { background-color: #357ABD; }
+        .restart-btn:active { transform: translateY(2px); }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background-color: #1E293B;
+            color: #F8FAFC;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+    <!-- 雲端同步狀態 -->
+    <div class="sync-indicator" id="syncIndicator">
+        <div class="sync-dot local" id="syncDot"></div>
+        <span id="syncText">本機儲存</span>
+    </div>
+
+    <div class="header">
+        <div class="progress-text" id="progressText">學習進度：23 / 30 題</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar" style="width: 76.6667%;"></div>
+        </div>
+    </div>
+
+    <div class="card-container" id="cardContainer" style="pointer-events: auto;">
+        <div class="card" id="flashcard">
+            <div class="card-face card-front" id="cardFront">【Level 1】兒童氣喘的典型症狀包含夜咳及活動誘發咳嗽，請問「持續咳嗽有痰」是典型特徵嗎？</div>
+            <div class="card-face card-back" id="cardBack"><div class="main-answer center-only">不是，持續咳嗽有痰較不代表兒童很可能有氣喘。</div></div>
+        </div>
+    </div>
+
+    <div class="srs-controls" id="srsControls">
+        <button class="srs-btn btn-hard" id="btnHard">🔴 Hard <span class="key-hint">按 1</span></button>
+        <button class="srs-btn btn-good" id="btnGood">🟡 Good <span class="key-hint">按 2</span></button>
+        <button class="srs-btn btn-easy" id="btnEasy">🟢 Easy <span class="key-hint">按 3</span></button>
+    </div>
+
+    <div class="hint-text" id="hintText" style="display: block;">
+        點擊卡片 或 按 <span class="key-hint">空白鍵 Space</span> 翻面看解答
+    </div>
+
+    <div id="toast" class="toast">🎮 歡迎回來！已為您恢復上次進度。</div>
+
+    <script>
+        // =============================================
+        // ⚙️  Supabase 設定 — 部署後請填入你的真實值
+        //     在 Supabase Dashboard > Project Settings > API
+        // =============================================
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // 例：https://xxxx.supabase.co
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // 你的 anon/public key
+
+        // 產生或讀取匿名使用者 ID（無需登入）
+        function getUserId() {
+            let uid = localStorage.getItem('flashcard_user_id');
+            if (!uid) {
+                uid = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                localStorage.setItem('flashcard_user_id', uid);
+            }
+            return uid;
+        }
+
+        const USER_ID = getUserId();
+
+        // =============================================
+        // Supabase 客戶端初始化
+        // =============================================
+        let supabaseClient = null;
+        let useCloud = false;
+
+        function initSupabase() {
+            try {
+                if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    useCloud = true;
+                    setSyncStatus('synced', '雲端已連線');
+                } else {
+                    setSyncStatus('local', '本機儲存');
+                }
+            } catch(e) {
+                console.warn('Supabase 初始化失敗，使用本機儲存', e);
+                setSyncStatus('offline', '離線模式');
+            }
+        }
+
+        // =============================================
+        // 同步狀態 UI
+        // =============================================
+        function setSyncStatus(status, text) {
+            const dot = document.getElementById('syncDot');
+            const label = document.getElementById('syncText');
+            dot.className = 'sync-dot ' + status;
+            label.textContent = text;
+        }
+
+        // =============================================
+        // 雲端進度儲存 / 讀取
+        // =============================================
+        async function saveProgressCloud(state) {
+            if (!useCloud || !supabaseClient) return saveProgressLocal(state);
+
+            setSyncStatus('syncing', '同步中...');
+            try {
+                const { error } = await supabaseClient
+                    .from('flashcard_progress')
+                    .upsert({
+                        user_id: USER_ID,
+                        active_queue: state.activeQueue,
+                        total_cards: state.totalCards,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id' });
+
+                if (error) throw error;
+                setSyncStatus('synced', '已同步');
+                saveProgressLocal(state); // 同時保留本機副本
+            } catch(e) {
+                console.warn('雲端儲存失敗，回退至本機', e);
+                setSyncStatus('offline', '離線模式');
+                saveProgressLocal(state);
+            }
+        }
+
+        async function loadProgressCloud() {
+            if (!useCloud || !supabaseClient) return loadProgressLocal();
+
+            setSyncStatus('syncing', '載入進度...');
+            try {
+                const { data, error } = await supabaseClient
+                    .from('flashcard_progress')
+                    .select('active_queue, total_cards')
+                    .eq('user_id', USER_ID)
+                    .single();
+
+                if (error || !data) return loadProgressLocal();
+
+                activeQueue = data.active_queue || [];
+                totalCards = data.total_cards || activeQueue.length;
+                setSyncStatus('synced', '已同步');
+                return activeQueue.length > 0;
+            } catch(e) {
+                console.warn('雲端讀取失敗，回退至本機', e);
+                setSyncStatus('offline', '離線模式');
+                return loadProgressLocal();
+            }
+        }
+
+        // =============================================
+        // 本機儲存（備援）
+        // =============================================
+        const STORAGE_KEY = 'clinicalFlashcards_progress';
+
+        function saveProgressLocal(state) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state || { activeQueue, totalCards }));
+        }
+
+        function loadProgressLocal() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    if (state.activeQueue && state.activeQueue.length > 0) {
+                        activeQueue = state.activeQueue;
+                        totalCards = state.totalCards || activeQueue.length;
+                        setSyncStatus('local', '本機儲存');
+                        return true;
+                    }
+                } catch(e) { console.error('無法讀取本機進度'); }
+            }
+            return false;
+        }
+
+        function clearProgress() {
+            localStorage.removeItem(STORAGE_KEY);
+            if (useCloud && supabaseClient) {
+                supabaseClient.from('flashcard_progress').delete().eq('user_id', USER_ID).then(() => {});
+            }
+        }
+
+        // =============================================
+        // 題庫資料
+        // =============================================
+        const defaultCSV = `題目,解答與解析
+"【Level 1】胎兒血紅素(HbF)在嬰兒出生後大約多久會逐漸被成人血紅素(HbA)取代？","出生後6個月內逐漸被取代。延伸學習：１．HbF主要由肝臟製造，HbA主要由骨髓製造２．出生的時候，胎兒血紅素佔血紅素總量的75%"
+"【Level 1】兒童阻塞型睡眠呼吸中止症(OSA)最不常出現的症狀是打呼、尿床還是皮膚癢？","皮膚癢。"
+"【Level 1】先天性橫膈膜疝氣(CDH)最常出現在病童的哪一側？","左側。延伸學習：CDH常合併PPHN；右側CDH發生率更為罕見，其伴隨肝臟疝入且肝臟為實質器官，導致肺發育不全(Pulmonary hypoplasia)相較左側更嚴重"
+"【Level 1】先天性肺部呼吸道畸形(CPAM)最常發生在哪一個呼吸道部位？","終末細支氣管。"
+"【Level 1】法洛式四重症(TOF)為最常見的發紺性先天性心臟病，其血液分流(shunt)方向為何？","右向左(right-to-left)分流，因缺氧血混入體循環而產生發紺。"
+"【Level 1】在胎兒時期，大部分的肺臟血流是經由哪個構造直接流入主動脈？","動脈導管(ductus arteriosus)。"
+"【Level 1】早產兒剛出生而未足月前，血氧飽和度(SpO2)至少要維持在多少％以上？","90%。"
+"【Level 1】足月產的嬰兒出生後，動脈導管通常在多久時間內會自行關閉？","一週內。"
+"【Level 1】早產兒常見開放性動脈導管(PDA)臨床上常使用何種藥物治療？","藥物可使用Ibuprofen、indomethacin、Acetaminophen治療。延伸學習：若藥物治療無效，伴隨呼吸急促、呼吸喘、心臟擴大、肺壓高等心臟衰竭的現象即明顯血痰會進行PDA ligation。"
+"【Level 1】關於胎兒肺部發育，肺泡第二型細胞在幾週時開始製造與儲存表面張力素（surfactant）？","20周。延伸學習：胎兒肺泡第二型細胞（Type II alveolar cells）約在懷孕 20~24週（小管期，Canalicular stage）開始製造與儲存表面張力素（surfactant），但直到約 34~36 週時量才達到功能充足的水平"
+"【Level 2】4歲男童喉嚨痛、越來越喘且講話含糊不清，懷疑會厭炎時，可以使用壓舌板檢查喉嚨嗎？","錯誤，會厭炎會導致喉部聲門上方的組織發生急性且明顯的腫脹，在這種情況下，任何會引起病童躁動、哭鬧的行為，或是直接對氣道進行機械性刺激（如使用壓舌板強行壓舌看喉嚨），都可能誘發突發性的喉痙攣，導致原本就狹窄的氣道瞬間「完全阻塞」並引發窒息。學習重點：會厭炎通常是由細菌感染引起常伴隨高燒，頸部側面 X 光片會觀察到腫脹的會厭軟骨，呈現「大拇指徵象」（thumb sign）。"
+"【Level 2】產房遇到羊水胎便染色的新生兒，若其活力佳、心跳＞100/分、膚色紅潤，需要馬上插管抽吸胎便嗎？","不需要，即使有胎便染色，活力佳的新生兒不應馬上執行氣管內插管抽吸。"
+"【Level 2】體重1200g的極低出生體重新生兒需插管時，為了防止漏氣，氣管內管一定要有cuff嗎？","不一定，新生兒氣管內管不一定要有cuff。8歲以前的孩童，呼吸道最狹窄的部位是環狀軟骨（cricoid cartilage），這個構造本身就能形成天然的封閉效果。延伸學習：如何選擇適當的size：1. 體重評估法（適用於早產兒、新生兒與小嬰兒）依據體重：小於1000 g：內徑 2.5 mm、1000 ~ 2000 g：內徑 3.0 mm、2000 ~ 3000 g：內徑 3.5 mm、正常足月新生兒（3000 ~ 4000 g）：內徑 3.5 ~ 4.0 mm。2. 年齡公式法（適用於1 歲以上的孩童）公式： 氣管內管內徑 (mm) = (病童年齡 ÷ 4) + 4；舉例： 4 歲孩童需要的尺寸為 (4÷4)+4=5.0 mm；8 歲孩童則為 (8÷4)+4=6.0 mm。"
+"【Level 2】針對患有新生兒持續性肺高壓症(PPHN)的足月兒，SpO2目標值可以跟早產兒一樣設定在88%～94%就好嗎？","錯誤，PPHN需要更高的血氧來幫助降低肺血管阻力。延伸學習：臨床上通常會將導管前（preductal，如右手）的 SpO2 維持在 90% 至 99%，且必須持續同時監測導管前與導管後（下肢）的氧氣飽和度差異。"
+"【Level 2】嚴重胎便吸入症候群(MAS)引起呼吸衰竭的病嬰，使用呼吸器時吸氣壓力設定應注意什麼？","吸氣壓不宜太高，避免併發氣漏症候群(air leak syndrome)。"
+"【Level 2】經皮血氧與二氧化碳分壓(PtcO2/PtcCO2)持續監測時，為了避免燒燙傷，電極片應多久改變一次貼放位置？","電極片處於高溫，為了預防皮膚熱傷害，應頻繁更換(通常每2至4小時)。延伸學習：電極片應貼在血管豐富的區域（例如：耳垂、上胸部、腹部、大腿），並且必須避開骨骼突出處或脊椎上方。不適用的病人：當病童處於低體溫、心衰竭、休克或使用特定血管收縮藥物時，皮膚表層微血管會收縮以保留血液給重要器官。"
+"【Level 2】PtcO2/PtcCO2電極片需要加熱到幾度，才能使皮下微血管擴張以測量氣體？","42～45 ℃。"
+"【Level 2】某些需要動脈導管維持開放的先天性心臟病(如HLHS)，給予過高的血氧濃度會有什麼風險？","高的血氧濃度可能會促使動脈導管關閉，危及病嬰生命。延伸學習：照護重點「避免高氧」、「給予PGE1 藥物」以及「置放 PDA 支架」，SpO2目標75% – 85%(會依據臨床情況修正)。"
+"【Level 2】在心輸出量足夠的情況下，新生兒插管後若聽診呼吸音較困難，可使用什麼工具來輔助確認氣管內管位置？","二氧化碳監測器(end-tidal CO2)。"
+"【Level 2】頸部側面照X光發現會厭軟骨腫脹，呈現什麼形狀(sign)是會厭炎的典型影像學特徵？","大拇指形狀(thumb sign)。延伸學習：哮吼主要為病毒感染，頸部X光片會顯示聲門下氣道狹窄，呈現「教堂尖塔徵象」（church steeple sign）。"
+"【Level 3】為了避免小兒病人發生呼吸器引起的肺損傷(VILI)，驅動壓力(driving pressure)不宜大於多少cm H2O？","15 cm H2O。"
+"【Level 3】將小兒嚴重呼吸窘迫症候群轉換為高頻振盪通氣(HFOV)時，初始設定吸氣時間(inspiratory time)大於50％是恰當的嗎？","最不恰當，過長的吸氣時間會導致氣體滯留與肺部過度充氣。"
+"【Level 3】哪些先天異常被列為 CPAP 的絕對禁忌症？","後鼻孔閉鎖（Choanal atresia）、顎裂（Cleft palate）、氣管食道瘻管（Tracheoesophageal fistula）、未經治療的先天性橫膈疝氣（Untreated congenital diaphragmatic hernia）。"
+"【Level 3】當呼吸窘迫症（RDS/PARDS）病童在傳統通氣模式（CMV）下效果不佳，欲評估是否改用高頻通氣（HFV）時，臨床上需評估哪些情況與客觀指標？","氧合指數(OI) > 15 (OI = [MAP x FiO2(%)] / PaO2)、Severe respiratory acidosis、是否併發Air leak syndromes。"
+"【Level 3】使用吐氣一氧化氮(FeNO)檢測時，若8歲兒童測得數值為40 ppb，是否極可能為氣喘？","是的，此情境最可能為氣喘兒童。延伸學習：除了症狀評估病人外，測量FeNO代表呼吸系統發炎狀態，以作為氣喘患者抗發炎藥物調整的指引。目前12歲以上的病人測得 FeNO 濃度大於 50ppb 定義為高濃度，12歲以下則為35ppb。"
+"【Level 3】小兒病人使用高頻通氣(HFV)時，因為氣體交換原理不同，所以毋需頻繁觀察胸部影像，對嗎？","錯誤，仍需頻繁觀察胸部影像以評估肺部充氣狀況。延伸學習：新生兒希望在第八至九根肋骨，而成人則希望在第九根肋骨的位置；超過第 10 肋骨為過度充氣。"
+"【Level 3】嬰兒在阻塞性氣道疾病時使用高頻通氣(HFV)，最需要留意的臨床風險是什麼？","有可能引起肺過度充氣(hyperinflation)的風險。延伸學習：HFV對氣管內管（ETT）直徑的變化極度敏感。當氣管內管痰液分泌物造成部分阻塞時，對氣流產生極大的阻力影響高頻震盪成效。"
+"【Level 3】使用bubble CPAP於高氣流量時，鼻管處測得的壓力與水面下吐氣管路的沒入深度有何關係？","鼻管處測得的壓力會略高於水面以下吐氣管路的沒入深度，大氣流在通過管路與產生劇烈氣泡時，會形成額外的阻力與回壓（back pressure）。延伸學習：不會透過增加氣體流量來改善氣體交換，單純調高流量，只會造成氣泡過度劇烈與無法預期的壓力波動。"
+"【Level 3】11個月大病嬰因嚴重肺炎併發肺高壓，下列何種藥物因會抑制心臟傳導而最不適合使用：PGI2、鈣離子阻斷劑、或PDE抑制劑？","鈣離子阻斷劑(calcium channel blocker)。延伸學習：< 1歲不宜使用calcium channel blocker主要是因為嬰兒心肌發育不全，CCB 會造成心肌收縮力喪失以及嚴重的傳導阻滯，導致心跳停止。"
+"【Level 3】有關小兒呼吸器雙控模式(dual control mode)，其吐氣循環機制(cycling)是透過什麼條件來引動？","時間或是最高流量降低到預設值。延伸學習：Dual Control Mode－VG or VTV是壓力限制，可用於HFOV、PTV、PCSIMV、PSV 、CMV，透過調節壓力達到最低限度（目標）的潮氣容積以保證病人通氣量。可以病人引動（Flow/Pressure Trigger），也可以在無自主呼吸時Time Trigger。"`;
+
+        // =============================================
+        // 遊戲狀態
+        // =============================================
+        let activeQueue = [];
+        let totalCards = 0;
+        let toastTimeout;
+
+        const cardContainer = document.getElementById('cardContainer');
+        const flashcardElement = document.getElementById('flashcard');
+        const cardFront = document.getElementById('cardFront');
+        const cardBack = document.getElementById('cardBack');
+        const progressText = document.getElementById('progressText');
+        const progressBar = document.getElementById('progressBar');
+        const srsControls = document.getElementById('srsControls');
+        const hintText = document.getElementById('hintText');
+        const toastElement = document.getElementById('toast');
+
+        function showToast(message, duration = 3000) {
+            toastElement.innerText = message;
+            toastElement.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toastElement.classList.remove('show'), duration);
+        }
+
+        function saveProgress() {
+            const state = { activeQueue, totalCards };
+            saveProgressCloud(state);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+                if (line.startsWith('"') && line.endsWith('"')) line = line.substring(1, line.length - 1);
+                const parts = line.split('","');
+                if (parts.length >= 2) result.push({ front: parts[0], back: parts[1] });
+            }
+            return result;
+        }
+
+        function formatAnswerText(text) {
+            const keywords = ["延伸學習：", "延申學習：", "學習重點：", "延伸學習:", "學習重點:"];
+            let formattedText = text;
+            let foundKeyword = null;
+            for (let kw of keywords) {
+                if (formattedText.includes(kw)) { foundKeyword = kw; break; }
+            }
+            if (foundKeyword) {
+                const parts = formattedText.split(foundKeyword);
+                return `<div class="main-answer">${parts[0].trim()}</div>
+                        <div class="concept-text">
+                            <span class="concept-title">💡 ${foundKeyword.replace(/[：:]/g, '')}：</span>
+                            ${parts[1].trim()}
+                        </div>`;
+            } else {
+                return `<div class="main-answer center-only">${formattedText}</div>`;
+            }
+        }
+
+        function loadCards(data) {
+            activeQueue = data.sort(() => Math.random() - 0.5);
+            totalCards = activeQueue.length;
+            saveProgress();
+            updateCard();
+        }
+
+        function updateCard() {
+            srsControls.classList.remove('visible');
+            flashcardElement.classList.remove('flipped');
+            hintText.style.display = 'block';
+
+            const remaining = activeQueue.length;
+            const completed = totalCards - remaining;
+            const percentage = totalCards === 0 ? 0 : (completed / totalCards) * 100;
+            progressBar.style.width = `${percentage}%`;
+            progressText.innerText = `學習進度：${completed} / ${totalCards} 題`;
+
+            setTimeout(() => {
+                if (activeQueue.length === 0) {
+                    cardFront.innerHTML = `
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+                            <div style="font-size:2.2rem;color:var(--primary-color);">🎉 恭喜破關！</div>
+                            <div style="font-size:1.3rem;color:#64748B;font-weight:normal;">回顧一下，是否還有需要加強複習的觀念</div>
+                            <button class="restart-btn" onclick="resetGame()">🔁 再挑戰一次</button>
+                        </div>`;
+                    cardBack.innerHTML = "";
+                    progressText.innerText = `通關完成！ 100%`;
+                    progressBar.style.width = `100%`;
+                    cardContainer.style.pointerEvents = 'auto';
+                    clearProgress();
+                    return;
+                }
+                cardContainer.style.pointerEvents = 'auto';
+                cardFront.innerText = activeQueue[0].front;
+                cardBack.innerHTML = formatAnswerText(activeQueue[0].back);
+            }, 150);
+        }
+
+        function flipCard() {
+            if (activeQueue.length > 0 && !flashcardElement.classList.contains('flipped')) {
+                flashcardElement.classList.add('flipped');
+                srsControls.classList.add('visible');
+                hintText.style.display = 'none';
+            }
+        }
+
+        cardContainer.addEventListener('click', flipCard);
+
+        function handleSRS(rating) {
+            if (activeQueue.length === 0 || !flashcardElement.classList.contains('flipped')) return;
+            const currentCard = activeQueue.shift();
+            if (rating === 'hard') {
+                activeQueue.splice(Math.min(2, activeQueue.length), 0, currentCard);
+            } else if (rating === 'good') {
+                activeQueue.push(currentCard);
+            }
+            // easy: 直接移除
+            saveProgress();
+            updateCard();
+        }
+
+        document.getElementById('btnHard').addEventListener('click', (e) => { e.stopPropagation(); handleSRS('hard'); });
+        document.getElementById('btnGood').addEventListener('click', (e) => { e.stopPropagation(); handleSRS('good'); });
+        document.getElementById('btnEasy').addEventListener('click', (e) => { e.stopPropagation(); handleSRS('easy'); });
+
+        document.addEventListener('keydown', (e) => {
+            if (activeQueue.length === 0) return;
+            const isFlipped = flashcardElement.classList.contains('flipped');
+            if (!isFlipped && e.code === 'Space') { e.preventDefault(); flipCard(); }
+            else if (isFlipped) {
+                if (e.key === '1') handleSRS('hard');
+                else if (e.key === '2') handleSRS('good');
+                else if (e.key === '3') handleSRS('easy');
+            }
+        });
+
+        window.resetGame = function() {
+            clearProgress();
+            location.reload();
+        };
+
+        // =============================================
+        // 啟動
+        // =============================================
+        window.onload = async () => {
+            initSupabase();
+            const hasProgress = await loadProgressCloud();
+            if (hasProgress) {
+                updateCard();
+                setTimeout(() => showToast('🎮 歡迎回來！已為您恢復上次進度。'), 500);
+            } else {
+                const parsedData = parseCSV(defaultCSV);
+                loadCards(parsedData);
+                setTimeout(() => showToast('💡 新測驗已準備就緒，預祝學習順利！'), 500);
+            }
+        };
+    </script>
+
+
+</body></html>
