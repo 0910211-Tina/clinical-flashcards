@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- saved from url=(0061)file:///D:/OneDrive/%E6%96%87%E4%BB%B6/Downloads/index_2.html -->
-<html lang="zh-TW"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>臨床核心觀念學習卡</title>
     <!-- Supabase SDK -->
-    <script src="./臨床核心觀念學習卡_files/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-color: #4A90E2;
@@ -279,16 +279,16 @@
     </div>
 
     <div class="header">
-        <div class="progress-text" id="progressText">學習進度：23 / 30 題</div>
+        <div class="progress-text" id="progressText">載入中...</div>
         <div class="progress-container">
-            <div class="progress-bar" id="progressBar" style="width: 76.6667%;"></div>
+            <div class="progress-bar" id="progressBar"></div>
         </div>
     </div>
 
-    <div class="card-container" id="cardContainer" style="pointer-events: auto;">
+    <div class="card-container" id="cardContainer">
         <div class="card" id="flashcard">
-            <div class="card-face card-front" id="cardFront">【Level 1】兒童氣喘的典型症狀包含夜咳及活動誘發咳嗽，請問「持續咳嗽有痰」是典型特徵嗎？</div>
-            <div class="card-face card-back" id="cardBack"><div class="main-answer center-only">不是，持續咳嗽有痰較不代表兒童很可能有氣喘。</div></div>
+            <div class="card-face card-front" id="cardFront">準備中...</div>
+            <div class="card-face card-back" id="cardBack">準備中...</div>
         </div>
     </div>
 
@@ -298,19 +298,19 @@
         <button class="srs-btn btn-easy" id="btnEasy">🟢 Easy <span class="key-hint">按 3</span></button>
     </div>
 
-    <div class="hint-text" id="hintText" style="display: block;">
+    <div class="hint-text" id="hintText">
         點擊卡片 或 按 <span class="key-hint">空白鍵 Space</span> 翻面看解答
     </div>
 
-    <div id="toast" class="toast">🎮 歡迎回來！已為您恢復上次進度。</div>
+    <div id="toast" class="toast"></div>
 
     <script>
         // =============================================
         // ⚙️  Supabase 設定 — 部署後請填入你的真實值
         //     在 Supabase Dashboard > Project Settings > API
         // =============================================
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // 例：https://xxxx.supabase.co
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // 你的 anon/public key
+        const SUPABASE_URL = https://uiigxahtadwyklnmfrin.supabase.co/rest/v1/       // 例：https://xxxx.supabase.co
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpaWd4YWh0YWR3eWtsbm1mcmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNTI3NTIsImV4cCI6MjA5MjkyODc1Mn0.eCxj8qp5ArS66vgTxS8xlfNim1xgYkxjwoaL5kawkhY'; // 你的 anon/public key
 
         // 產生或讀取匿名使用者 ID（無需登入）
         function getUserId() {
@@ -632,6 +632,5 @@
             }
         };
     </script>
-
-
-</body></html>
+</body>
+</html>
